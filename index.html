@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Potential Biogas Generation Methodology (INTI-DEyCC) Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="js/leaflet.js"></script>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        html, body, #map {
+            height: 100vh; /* Full viewport height */
+            width: 100vw;  /* Full viewport width */
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Optional: Prevents scrolling */
+        }
+        
+        /* CLASS and id style settings */
+        /* Style for the info object*/
+        .info {
+            background-color: #e96b6bbe;
+            padding: 0px;
+            border-radius: 6px;
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* Style for ini panel panel */
+        #ini_panel {
+            margin: 8px;
+            padding: 0 0 0px;
+            margin-bottom: 5px;
+        }
+
+        #infoIni_descp {
+            margin: 10px;
+            font-size: 15px;
+            color: #ffffff; /* Customize title color */
+            /*font-weight: bold;*/
+            text-align: justify; /* Centers the text */
+            /*font-family: 'DM Sans', sans-serif;*/ /* Sets the font */
+        }
+
+        /* Style for wqi panel */
+        #info_panel {
+            margin: 8px;
+            padding: 0 0 0px;
+            margin-bottom: 5px;
+        }
+
+        #info_title {
+            margin: 10px;
+            font-size: 18px;
+            color: #ffffff; /* Customize title color */
+            font-weight: bold;
+            text-align: left; /* Centers the text */
+            /*font-family: 'DM Sans', sans-serif;*/ /* Sets the font */
+        }
+
+        #info_CurrFeat {
+            margin: 10px;
+            font-size: 15px;
+            color: black; /* Customize title color */
+            /*font-weight: bold;*/
+            text-align: left; /* Centers the text */
+            /*font-family: 'DM Sans', sans-serif;*/ /* Sets the font */
+        }
+        
+        .legend {
+            margin: 10px;
+            padding: 8px 12px;
+            line-height: 18px;
+            color: black;
+            font-size: 14px;
+            border-radius: 8px;
+        }
+
+        #legend_title {
+            font-size: 18px;
+            color: #ffffff;
+            font-weight: bold;
+            text-align: left;
+            margin: 0 0 5px 0; /* ✅ separación vertical mínima (2–3 px) */
+        }
+
+        /* 🔧 Cada línea de color y texto en una fila horizontal */
+        .legend-row {
+            display: flex;
+            align-items: center; /* centra verticalmente caja y texto */
+            margin-bottom: 0px; /* pequeño espacio entre filas */
+        }
+
+        .legend i {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            opacity: 1;
+        }
+
+
+        /* Responsive design for smaller screens in portrait orientation */
+        @media (max-width: 600px) and (orientation: portrait) {
+
+                /* Style for wqi panel */
+                #ini_panel {
+                    max-width: 60%;
+                    /*pointer-events: none; */ /* clicks pass through */ 
+                }
+
+                #infoIni_descp {
+                    font-size: 13px;
+                }
+
+                /* Style for IBRI panel */
+                #info_panel {
+                    max-width: 60%;
+                }
+
+                #info_title {
+                    font-size: 15px;
+                }
+
+                #info_CurrFeat {
+                    font-size: 13px;
+                }
+
+                /* Style for the entire legend container */
+                #legend{
+                    bottom: 40px;
+                }
+
+                #legend_title {
+                    font-size: 16px;
+                }
+
+                #legend i {
+                    width: 14px;
+                    height: 14px;
+                    font-size: 12px;
+                }
+    
+        }
+
+        /* Responsive design for smaller screens in landscape orientation. Not strictly customized */
+        @media (max-width: 800px) and (orientation: landscape) {
+            .legend {
+                max-width: 40%;
+                font-size: 14px;
+                bottom: 40px;
+            }
+            .panel{
+                max-width: 60%;
+                font-size: 14px;
+            }
+
+            .info {
+                max-width: 40%;
+                font-size: 14px;
+                top: 10px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    </div>
+    <script>
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // INITIAL MAP SETTINGS
+
+        let map = L.map("map", {zoomControl: false}).setView([-44.0, -60], 4);
+
+        L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attribution/">CartoDB</a>',
+            subdomains: "abcd",
+            maxZoom: 15
+        }).addTo(map);
+
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // MAIN PANELS INITIALIZATION
+
+        let infoIni = L.control({position: "topright"});
+        let info = L.control({position: "topright"});
+
+        // Initialize info_ini panel
+        infoIni.remove()
+
+        function show_infoIni(divWidth) {
+            if (infoIni._map) {
+                infoIni.remove(); // Remove existing control if already added
+            }
+
+            infoIni.onAdd = function() {
+                let div = L.DomUtil.create("div", "info");
+                div.innerHTML = `<p id="infoIni_descp"> Pick a polygon to get information about the biogas production in the Unit of Analysis (SUA)</p>`;
+                div.style.width = divWidth //'30em';
+                div.id = "ini_panel";
+                return div;
+            };
+
+            infoIni.addTo(map);
+        }
+
+        show_infoIni('20em')
+
+        function infoDiv(divWidth) {
+            if (info._map) {
+                // Remove existing control if it's already added to the map
+                info.remove();
+            }
+
+            info.onAdd = function() {
+                let div = L.DomUtil.create("div", "info");
+                div.innerHTML = '<h4 id="info_title";">Referencias</h4><p id="info_CurrFeat"></p>';
+                div.style.width = divWidth;
+                div.id = "info_panel";
+                return div; // Return the div to be added to the map
+            };
+
+            info.addTo(map); // Add the control to the map
+        }
+
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // ---------------------------------------------------------------------------------------------------------------------------------
+        // COMPLEMENTARY FUNCTIONS FOR LAYERS INTERACTION
+
+        let highlightStyle = {
+            weight: 5,
+            color: "grey",
+            fillOpacity: 0.5
+        };
+
+        function highlight_feature(e) {
+            infoIni.remove()
+            infoDiv('24em')
+            info_p = document.getElementById("info_CurrFeat");
+            info_h4 = document.getElementById("info_title");
+            e.target.setStyle(highlightStyle);
+            e.target.bringToFront();
+            info_h4.innerText = "SUA Description"
+
+            // Format contribution data
+            const valueBgss = e.target.feature.properties.percj_Bagasse;
+            const formValBgss = valueBgss != null ? Number(valueBgss).toFixed(2) : "N/A";
+            const valueSM = e.target.feature.properties.percj_SwinMan;
+            const formValSM = valueSM != null ? Number(valueSM).toFixed(2) : "N/A";
+            const valueWDGS = e.target.feature.properties.percj_WDGS;
+            const formValWDGS = valueWDGS != null ? Number(valueWDGS).toFixed(2) : "N/A";
+            
+
+            info_p.innerHTML =
+                "<b>Aggregated Potential Biogas Generation [m<sup>3</sup>/d]:</b> " + e.target.feature.properties.GenB_Total_m3d + "<br>" +
+                "<b>Bagasse Contribution [%] :</b> " + formValBgss + "<br>" +
+                "<b>Swin Manure Contribution [%]:</b> " + formValSM + "<br>" +
+                "<b>WDGS Contribution [%]:</b> " + formValWDGS + "<br>" +
+                "<b>Province Centroid</b> " + e.target.feature.properties.Provincia + "<br>" +
+                "<b>Department Centroid</b> " + e.target.feature.properties.Departamento + "<br>";
+        }
+
+        function reset_highlight(e, gjLayer) {
+            info.remove()
+            show_infoIni('20em')
+            e.target.bringToBack();
+            gjLayer.resetStyle(e.target);
+            info_p.innerHTML = "";
+            info_h4.innerText = "Referencias";
+        }
+
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------------------------------------
+
+        // COMPLEMENTARY LAYERS  ---------------------------------------------------------------------------------------------------------------
+
+        // Loading Argentina boundaries layer
+        fetch("data/Argentina_bound.geojson")
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {  // Add GeoJSON layer to the map once the file is loaded
+            L.geoJSON(data, {style: {weight : 2,
+                color : "black",
+                fillColor : "None",
+                fillOpacity : 0
+                }
+            })
+                .addTo(map);
+            });
+
+        // Loading Argentina provinces boundaries layer
+        fetch("data/Provincias_IGN_4326yMalvinas05.geojson")
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {  // Add GeoJSON layer to the map once the file is loaded
+                L.geoJSON(data, {style : {
+                    weight : 1.4,
+                    color : "black",
+                    fillColor : "none",
+                    fillOpacity : 0.2,
+                    }
+            })
+                .addTo(map);
+            });
+
+        // Loading uber h3 grid level 3 for Argentina
+        fetch("data/Argentina_gridH3_level3_clean.geojson")
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {  // Add GeoJSON layer to the map once the file is loaded
+                L.geoJSON(data, {style : {
+                    weight : 1,
+                    color : "black",
+                    fillColor : "none",
+                    }
+            })
+                .addTo(map);
+            });
+
+        // BIOGAS POTENTIAL LAYER  ---------------------------------------------------------------------------------------------------------------
+
+        // Initializing layer and layer group
+        let geojsonLayer01;
+        let geojsonLayer02;
+        let layerGroup01 = L.layerGroup()// Departments boundaries
+
+        // Loading biogas potential generation estimations
+        fetch("data/biogasGen_total_data_03May30m3d.geojson")
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                    geojsonLayer01 = L.geoJSON(data, {
+                        style: stat_style,
+                        onEachFeature: function(feature, layer) {
+                            layer.on("mouseover", highlight_feature);
+                            layer.on("mouseout", function(e) {
+                                reset_highlight(e, geojsonLayer01);
+                            });
+                        }
+                    });
+                    geojsonLayer01.addTo(map);
+                });
+
+        // 🔹 1. General delay function
+        function delayExecution(callback, delayMs) {
+            setTimeout(() => {
+                console.log(`⏱️ Running delayed task after ${delayMs / 1000} seconds`);
+                callback();
+            }, delayMs);
+        }
+
+        // 🔹 2. Function to load and display the biogas layer
+        function loadBiogasLayer() {
+            fetch("data/biogasGen_total_data_03May30m3d_May07.geojson")
+                .then(response => response.json())
+                .then(data => {
+                    let geojsonLayer02 = L.geoJSON(data, {
+                        style: {
+                            weight: 4,
+                            color: "#d5c10b",
+                            fillColor: "none"
+                        }
+                    }).addTo(map);
+
+                    // Ensure the layer is above everything
+                    geojsonLayer02.bringToFront();
+
+                    console.log("✅ Biogas layer added and brought to front.");
+                })
+                .catch(err => console.error("Error loading biogas layer:", err));
+        }
+
+        // 🔹 3. Use both together
+        delayExecution(loadBiogasLayer, 1000); // delay = 2 seconds
+
+
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // SET BIOGAS GENERATION ESTIMATIONS LAYERS STYLE ACCORDING TO THE POSTER
+            
+        function stat_color(d) {
+            if (d > 208031) return "#d7191c";
+            if (d > 200031) return "#dd3027";
+            if (d > 192031) return "#e34731";//
+            if (d > 184031) return "#e95e3c";
+            if (d > 176031) return "#ee7546";
+            if (d > 168031) return "#f48c51"; //
+            if (d > 160031) return "#faa35c";
+            if (d > 152031) return "#fdb468";
+            if (d > 144031) return "#fdc177"; //
+            if (d > 136031) return "#fecd85";
+            if (d > 128031) return "#feda94";
+            if (d > 120031) return "#fee6a2"; //
+            if (d > 112031) return "#fff3b1";
+            if (d > 104031) return "#ffffbf";
+            if (d > 96031)  return "#f2fabb"; //
+            if (d > 88031)  return "#e5f5b7";
+            if (d > 80031)  return "#d8efb3";
+            if (d > 72031)  return "#cbeaae"; //
+            if (d > 64031)  return "#bee5aa";
+            if (d > 56031)  return "#b1e0a6";
+            if (d > 48031)  return "#a1d6a6"; //
+            if (d > 40031)  return "#8dc8a9";
+            if (d > 32031)  return "#7abaac";
+            if (d > 24031)  return "#66adb0"; //
+            if (d > 16031)  return "#529fb3"; 
+            if (d > 8031)   return "#3f91b7";
+            if (d > 0) return "#2b83ba"; //
+            return "None";
+            }
+
+        function stat_style(feature) {
+            return {
+                fillColor: stat_color(feature.properties.GenB_Total_m3d),
+                weight: 1,
+                opacity: 1,
+                color: "black",
+                fillOpacity: 0.7
+            };
+        }
+
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // -------------------------------------------------------------------------------------------------------------------------------------
+        // LEGEND PANEL
+
+        var legend = L.control({position: 'bottomright'});
+
+        legend.onAdd = function (map) {
+
+            //legend.innerText = "Potential Biogas Generation"
+
+            var div = L.DomUtil.create('div', 'info legend'),
+                grades = [30, 24000, 48000, 72000, 96000, 120000, 144000, 168000, 200000],
+                labels = [];
+            
+            div.style.width = 'auto';
+            div.innerHTML = '<h4 id="legend_title";">Potential Biogas<br>Generation [m<sup>3</sup>/d]</h4>';
+
+            // loop through our density intervals and generate a label with a colored square for each interval
+            for (var i = 0; i < grades.length; i++) {
+                div.innerHTML +=
+                    '<div class="legend-row">' +
+                    '<i style="background:' + stat_color(grades[i] + 1) + '"></i>' +
+                    (i < grades.length - 1 ? grades[i] : grades[i] + '+') +
+                    '</div>';
+            }
+
+            return div;
+        };
+
+        legend.addTo(map);
+    
+    </script>
+</body>
+</html>
