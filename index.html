@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Potential Biogas Generation Methodology (INTI-DEyCC) Demo</title>
+    <title> Potencial de biogás estimado (INTI-DEyCC) Demo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="css/leaflet.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -199,7 +199,7 @@
 
             infoIni.onAdd = function() {
                 let div = L.DomUtil.create("div", "info");
-                div.innerHTML = `<p id="infoIni_descp"> Pick a polygon to get information about the biogas production in the Unit of Analysis (SUA)</p>`;
+                div.innerHTML = `<p id="infoIni_descp"> Selecciona un hexágono para obtener información sobre la generación de biogás en el área de análisis (Hexágono de ~ 60 km de lado). En <img src="images/plantas_biodigestoras03.png" width="30"> se observan las plantas de biodigestión activas al año 2023</p>`;
                 div.style.width = divWidth //'30em';
                 div.id = "ini_panel";
                 return div;
@@ -233,7 +233,7 @@
 
         let highlightStyle = {
             weight: 5,
-            color: "grey",
+            color: "yellow",
             fillOpacity: 0.5
         };
 
@@ -244,24 +244,17 @@
             info_h4 = document.getElementById("info_title");
             e.target.setStyle(highlightStyle);
             e.target.bringToFront();
-            info_h4.innerText = "SUA Description"
+            info_h4.innerText = "Descripción de la unidad de análisis seleccionada";
 
             // Format contribution data
-            const valueBgss = e.target.feature.properties.percj_Bagasse;
-            const formValBgss = valueBgss != null ? Number(valueBgss).toFixed(2) : "N/A";
-            const valueSM = e.target.feature.properties.percj_SwinMan;
-            const formValSM = valueSM != null ? Number(valueSM).toFixed(2) : "N/A";
-            const valueWDGS = e.target.feature.properties.percj_WDGS;
-            const formValWDGS = valueWDGS != null ? Number(valueWDGS).toFixed(2) : "N/A";
+            const valueBgtotal = e.target.feature.properties.GenB_Total_m3d;
+            const formValBgtotal = valueBgtotal != null ? Number(valueBgtotal).toFixed(2) : "N/A";
             
-
             info_p.innerHTML =
-                "<b>Aggregated Potential Biogas Generation [m<sup>3</sup>/d]:</b> " + e.target.feature.properties.GenB_Total_m3d + "<br>" +
-                "<b>Bagasse Contribution [%] :</b> " + formValBgss + "<br>" +
-                "<b>Swin Manure Contribution [%]:</b> " + formValSM + "<br>" +
-                "<b>WDGS Contribution [%]:</b> " + formValWDGS + "<br>" +
-                "<b>Province Centroid</b> " + e.target.feature.properties.Provincia + "<br>" +
-                "<b>Department Centroid</b> " + e.target.feature.properties.Departamento + "<br>";
+                "<b>Producción de biogas total estimada [m<sup>3</sup>/año]:</b> " + formValBgtotal + "<br>" +
+                "<b>Actividad más relevante :</b> " + e.target.feature.properties.Higest_actv + "<br>" +
+                "<b>Centroide provincia</b> " + e.target.feature.properties.Provincia + "<br>" +
+                "<b>Centroide departamento</b> " + e.target.feature.properties.Departamento + "<br>";
         }
 
         function reset_highlight(e, gjLayer) {
@@ -329,6 +322,7 @@
         // Initializing layer and layer group
         let geojsonLayer01;
         let geojsonLayer02;
+        let geojsonLayer03;
         let layerGroup01 = L.layerGroup()// Departments boundaries
 
         // Loading biogas potential generation
@@ -347,6 +341,9 @@
                         }
                     });
                     geojsonLayer01.addTo(map);
+
+                    // Ensure the layer is above everything
+                    geojsonLayer01.bringToFront();
                 });
         
         /*
@@ -382,6 +379,28 @@
         // 🔹 3. Use both together
         delayExecution(loadBiogasLayer, 1000); // delay = 2 seconds
         */
+
+        // BIOGAS PLANTS LAYER  ---------------------------------------------------------------------------------------------------------------
+
+        // Setting stations' icon configuration
+        let myIcon = L.icon({
+            iconUrl: 'images/plantas_biodigestoras03.png',
+            iconSize:     [30, 30], // width and height of the image in pixels
+            iconAnchor:   [30, 30], // point of the icon which will correspond to marker's location
+        })
+
+        // Loading stations layer with historical data
+        fetch("data/plantas_biodigestoras_2023.geojson")
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                geojsonLayer03 = L.geoJSON(data, {
+                    pointToLayer: function(feature, latlng) {
+                        return L.marker(latlng, { icon: myIcon });
+                    }
+                }).addTo(map); // Add the layer directly to the map
+            });
 
         // -------------------------------------------------------------------------------------------------------------------------------------
         // -------------------------------------------------------------------------------------------------------------------------------------
@@ -423,7 +442,7 @@
             //legend.innerText = "Potential Biogas Generation"
 
             var div = L.DomUtil.create('div', 'info legend'),
-                grades = [30, 24000, 48000, 72000, 96000, 120000, 144000, 168000, 200000],
+                grades = [750, 3100, 10000, 31000, 100000, 310000, 1000000, 3100000, 10000000, 70000000],
                 labels = [];
             
             div.style.width = 'auto';
